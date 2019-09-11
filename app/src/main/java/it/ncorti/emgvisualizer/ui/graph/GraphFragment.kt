@@ -14,7 +14,7 @@ import it.ncorti.emgvisualizer.R
 import javax.inject.Inject
 import kotlinx.android.synthetic.main.layout_graph.*
 
-class GraphFragment : BaseFragment<GraphContract.Presenter>(), GraphContract.View {
+open class GraphFragment : BaseFragment<GraphContract.Presenter>(), GraphContract.View {
 
     companion object {
         fun newInstance() = GraphFragment()
@@ -37,13 +37,18 @@ class GraphFragment : BaseFragment<GraphContract.Presenter>(), GraphContract.Vie
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        sensor_graph_view.channels = MYO_CHANNELS
+        sensor_graph_view.channels = 18
+                //MYO_CHANNELS
         sensor_graph_view.maxValue = MYO_MAX_VALUE
         sensor_graph_view.minValue = MYO_MIN_VALUE
     }
 
-    override fun showData(data: FloatArray) {
-        sensor_graph_view?.addPoint(data)
+    override fun showDataEmg(data: FloatArray) {
+        sensor_graph_view?.addPointEmg(data)
+    }
+
+    override fun showDataImu(data: FloatArray) {
+        sensor_graph_view?.addPointImu(data)
     }
 
     override fun startGraph(running: Boolean) {

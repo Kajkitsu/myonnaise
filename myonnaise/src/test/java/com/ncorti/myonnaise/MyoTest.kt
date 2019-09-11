@@ -136,7 +136,7 @@ class MyoTest {
         val myo = Myo(mockBlDevice)
         myo.characteristicCommand = null
 
-        assertFalse(myo.sendCommand(CommandList.vibration1()))
+        assertFalse(myo.sendCommand(CommandList.vibrationShort()))
     }
 
     @Test
@@ -147,7 +147,7 @@ class MyoTest {
             on(mock.properties) doReturn BluetoothGattCharacteristic.PROPERTY_WRITE
         }
 
-        assertTrue(myo.sendCommand(CommandList.vibration1()))
+        assertTrue(myo.sendCommand(CommandList.vibrationShort()))
         verify(myo.gatt)?.writeCharacteristic(myo.characteristicCommand)
     }
 

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
@@ -20,6 +21,7 @@ import it.ncorti.emgvisualizer.ui.graph.GraphFragment
 import it.ncorti.emgvisualizer.ui.scan.ScanDeviceFragment
 import javax.inject.Inject
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.layout_graph.*
 
 private const val PREFS_GLOBAL = "global"
 private const val KEY_COMPLETED_ONBOARDING = "completed_onboarding"
@@ -52,6 +54,7 @@ class MainActivity : AppCompatActivity(), HasSupportFragmentInjector {
             ScanDeviceFragment.newInstance(),
             ControlDeviceFragment.newInstance(),
             GraphFragment.newInstance(),
+
             ExportFragment.newInstance()
         )
 
@@ -77,13 +80,87 @@ class MainActivity : AppCompatActivity(), HasSupportFragmentInjector {
             when (item.itemId) {
                 R.id.item_scan -> view_pager.currentItem = 0
                 R.id.item_control -> view_pager.currentItem = 1
-                R.id.item_graph -> view_pager.currentItem = 2
+                R.id.item_graph_emg -> {
+                    view_pager.currentItem = 2
+
+                }
+
                 R.id.item_export -> view_pager.currentItem = 3
             }
             false
         }
     }
 
+    fun actualize(v : View) {
+        sensor_graph_view.isEmgModeOn = !imuModeOn.isChecked
+        if(!sensor_graph_view.isEmgModeOn)
+        {
+            ch0.visibility=View.INVISIBLE
+            ch1.visibility=View.INVISIBLE
+            ch2.visibility=View.INVISIBLE
+            ch3.visibility=View.INVISIBLE
+            ch4.visibility=View.INVISIBLE
+            ch5.visibility=View.INVISIBLE
+            ch6.visibility=View.INVISIBLE
+            ch7.visibility=View.INVISIBLE
+
+            ch8.visibility=View.VISIBLE
+            ch9.visibility=View.VISIBLE
+            ch10.visibility=View.VISIBLE
+            ch11.visibility=View.VISIBLE
+            ch12.visibility=View.VISIBLE
+            ch13.visibility=View.VISIBLE
+            ch14.visibility=View.VISIBLE
+            ch15.visibility=View.VISIBLE
+            ch16.visibility=View.VISIBLE
+            ch17.visibility=View.VISIBLE
+        }
+        else
+        {
+            ch0.visibility=View.VISIBLE
+            ch1.visibility=View.VISIBLE
+            ch2.visibility=View.VISIBLE
+            ch3.visibility=View.VISIBLE
+            ch4.visibility=View.VISIBLE
+            ch5.visibility=View.VISIBLE
+            ch6.visibility=View.VISIBLE
+            ch7.visibility=View.VISIBLE
+
+            ch8.visibility=View.INVISIBLE
+            ch9.visibility=View.INVISIBLE
+            ch10.visibility=View.INVISIBLE
+            ch11.visibility=View.INVISIBLE
+            ch12.visibility=View.INVISIBLE
+            ch13.visibility=View.INVISIBLE
+            ch14.visibility=View.INVISIBLE
+            ch15.visibility=View.INVISIBLE
+            ch16.visibility=View.INVISIBLE
+            ch17.visibility=View.INVISIBLE
+        }
+
+
+
+        sensor_graph_view.tableOfSelectedData[0]=ch0.isChecked
+        sensor_graph_view.tableOfSelectedData[1]=ch1.isChecked
+        sensor_graph_view.tableOfSelectedData[2]=ch2.isChecked
+        sensor_graph_view.tableOfSelectedData[3]=ch3.isChecked
+        sensor_graph_view.tableOfSelectedData[4]=ch4.isChecked
+        sensor_graph_view.tableOfSelectedData[5]=ch5.isChecked
+        sensor_graph_view.tableOfSelectedData[6]=ch6.isChecked
+        sensor_graph_view.tableOfSelectedData[7]=ch7.isChecked
+        sensor_graph_view.tableOfSelectedData[8]=ch8.isChecked
+        sensor_graph_view.tableOfSelectedData[9]=ch9.isChecked
+        sensor_graph_view.tableOfSelectedData[10]=ch10.isChecked
+        sensor_graph_view.tableOfSelectedData[11]=ch11.isChecked
+        sensor_graph_view.tableOfSelectedData[12]=ch12.isChecked
+        sensor_graph_view.tableOfSelectedData[13]=ch13.isChecked
+        sensor_graph_view.tableOfSelectedData[14]=ch14.isChecked
+        sensor_graph_view.tableOfSelectedData[15]=ch15.isChecked
+        sensor_graph_view.tableOfSelectedData[16]=ch16.isChecked
+        sensor_graph_view.tableOfSelectedData[17]=ch17.isChecked
+
+
+    }
     fun navigateToPage(pageId: Int) {
         view_pager.currentItem = pageId
     }
@@ -97,4 +174,5 @@ class MainActivity : AppCompatActivity(), HasSupportFragmentInjector {
             return fragmentList[position]
         }
     }
+
 }

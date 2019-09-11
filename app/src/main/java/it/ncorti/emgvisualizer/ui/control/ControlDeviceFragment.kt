@@ -1,6 +1,7 @@
 package it.ncorti.emgvisualizer.ui.control
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -40,7 +41,7 @@ class ControlDeviceFragment : BaseFragment<ControlDeviceContract.Presenter>(), C
         super.onViewCreated(view, savedInstanceState)
 
         button_connect.setOnClickListener { controlDevicePresenter.onConnectionToggleClicked() }
-        button_start_streaming.setOnClickListener { controlDevicePresenter.onStreamingToggleClicked() }
+        button_start_streaming.setOnClickListener {controlDevicePresenter.onStreamingToggleClicked()}
         button_vibrate_1.setOnClickListener { controlDevicePresenter.onVibrateClicked(1) }
         button_vibrate_2.setOnClickListener { controlDevicePresenter.onVibrateClicked(2) }
         button_vibrate_3.setOnClickListener { controlDevicePresenter.onVibrateClicked(3) }

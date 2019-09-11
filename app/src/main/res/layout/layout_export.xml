@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
@@ -10,7 +11,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="@dimen/default_margin"
-        android:text="@string/export_points"
+        android:text="EMG export points"
+        tools:ignore="HardcodedText"
         android:textColor="@color/primaryColor" />
 
     <TextView
@@ -41,56 +43,64 @@
         android:layout_marginTop="@dimen/default_margin"
         android:layout_marginRight="@dimen/default_margin"
         android:enabled="false"
-        android:text="@string/start_collecting" />
+        android:text="@string/start" />
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/button_reset_collecting"
+        android:id="@+id/button_save_collecting"
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginLeft="@dimen/default_margin"
         android:layout_marginRight="@dimen/default_margin"
         android:enabled="false"
-        android:text="@string/reset" />
+        android:text="@string/save" />
 
     <TextView
-        android:id="@+id/save_export_title"
         style="@style/TextAppearance.AppCompat.Subhead"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="@dimen/default_margin"
-        android:text="@string/save_export"
-        android:textColor="@color/primaryColor"
-        android:visibility="invisible" />
+        android:text="IMU export points"
+        tools:ignore="HardcodedText"
+        android:textColor="@color/primaryColor" />
 
     <TextView
-        android:id="@+id/save_export_subtitle"
-        style="@style/TextAppearance.AppCompat.Body1"
+        android:id="@+id/imu_points_count"
+        style="@style/TextAppearance.AppCompat.Headline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/default_margin"
+        android:layout_marginRight="@dimen/default_margin"
+        android:text="@string/zero"
+        android:textColor="@color/primaryColor" />
+
+    <TextView
+        android:id="@+id/imu_points_count_subtitle"
+        style="@style/TextAppearance.AppCompat.Caption"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/default_margin"
         android:layout_marginEnd="@dimen/default_margin"
-        android:text="@string/save_info_message"
-        android:visibility="invisible" />
+        android:text="@string/points_to_export" />
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/button_share"
+        android:id="@+id/imu_button_start_collecting"
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginLeft="@dimen/default_margin"
         android:layout_marginTop="@dimen/default_margin"
         android:layout_marginRight="@dimen/default_margin"
-        android:text="@string/share"
-        android:visibility="invisible" />
+        android:enabled="false"
+        android:text="@string/start" />
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/button_save"
-        style="@style/Widget.MaterialComponents.Button"
+        android:id="@+id/imu_button_save_collecting"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginLeft="@dimen/default_margin"
         android:layout_marginRight="@dimen/default_margin"
-        android:text="@string/save"
-        android:visibility="invisible" />
+        android:enabled="false"
+        android:text="@string/save" />
 </LinearLayout>

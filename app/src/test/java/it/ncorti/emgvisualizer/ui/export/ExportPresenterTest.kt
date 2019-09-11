@@ -70,7 +70,7 @@ class ExportPresenterTest {
     @Test
     fun onCollectionTogglePressed_withStreamingDeviceAndNotSubscribed_showCollectedPoints() {
         whenever(mockedDeviceManager.myo?.isStreaming()).thenReturn(true)
-        whenever(mockedDeviceManager.myo?.dataFlowable())
+        whenever(mockedDeviceManager.myo?.dataFlowableEmg())
             .thenReturn(
                 Flowable.just(
                     floatArrayOf(1.0f),
@@ -84,7 +84,7 @@ class ExportPresenterTest {
 
         assertNotNull(testPresenter.dataSubscription)
         verify(mockedView).showCollectionStarted()
-        verify(mockedView).disableResetButton()
+        verify(mockedView).disableSaveButton()
         verify(mockedView).showCollectedPoints(1)
         verify(mockedView).showCollectedPoints(2)
         verify(mockedView).showCollectedPoints(3)
@@ -99,30 +99,26 @@ class ExportPresenterTest {
         testPresenter.onCollectionTogglePressed()
 
         verify(testPresenter.dataSubscription)?.dispose()
-        verify(mockedView).enableResetButton()
-        verify(mockedView).showSaveArea()
+        verify(mockedView).enableSaveButton()
         verify(mockedView).showCollectionStopped()
     }
 
     @Test
     fun onResetPressed_resetTheView() {
-        testPresenter.onResetPressed()
+        testPresenter.onSavePressed()
 
         verify(mockedView).showCollectedPoints(0)
-        verify(mockedView).hideSaveArea()
-        verify(mockedView).disableResetButton()
+        verify(mockedView).disableSaveButton()
     }
 
     @Test
     fun onSavePressed_askViewToSave() {
-        testPresenter.onSavePressed()
 
         verify(mockedView).saveCsvFile(ArgumentMatchers.anyString())
     }
 
     @Test
     fun onSharePressed_askViewToShare() {
-        testPresenter.onSharePressed()
 
         verify(mockedView).sharePlainText(ArgumentMatchers.anyString())
     }

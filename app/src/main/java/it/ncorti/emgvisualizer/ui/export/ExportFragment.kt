@@ -2,6 +2,7 @@ package it.ncorti.emgvisualizer.ui.export
 
 import android.Manifest
 import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -11,6 +12,7 @@ import android.os.Environment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import dagger.android.support.AndroidSupportInjection
@@ -20,6 +22,8 @@ import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
 import kotlinx.android.synthetic.main.layout_export.*
+import java.util.Date
+import java.text.SimpleDateFormat
 
 private const val REQUEST_WRITE_EXTERNAL_CODE = 2
 
@@ -50,17 +54,26 @@ class ExportFragment : BaseFragment<ExportContract.Presenter>(), ExportContract.
         super.onViewCreated(view, savedInstanceState)
 
         button_start_collecting.setOnClickListener { exportPresenter.onCollectionTogglePressed() }
-        button_reset_collecting.setOnClickListener { exportPresenter.onResetPressed() }
-        button_share.setOnClickListener { exportPresenter.onSharePressed() }
-        button_save.setOnClickListener { exportPresenter.onSavePressed() }
+        button_save_collecting.setOnClickListener { exportPresenter.onSavePressed() }
+
+        imu_button_start_collecting.setOnClickListener { exportPresenter.onImuCollectionTogglePressed() }
+        imu_button_save_collecting.setOnClickListener { exportPresenter.onImuSavePressed() }
     }
 
     override fun enableStartCollectingButton() {
         button_start_collecting.isEnabled = true
     }
 
+    override fun enableImuStartCollectingButton() {
+        imu_button_start_collecting.isEnabled = true
+    }
+
     override fun disableStartCollectingButton() {
         button_start_collecting.isEnabled = false
+    }
+
+    override fun disableImuStartCollectingButton() {
+        imu_button_start_collecting.isEnabled = false
     }
 
     override fun showNotStreamingErrorMessage() {
@@ -68,37 +81,43 @@ class ExportFragment : BaseFragment<ExportContract.Presenter>(), ExportContract.
     }
 
     override fun showCollectionStarted() {
-        button_start_collecting?.text = getString(R.string.stop_collecting)
+        button_start_collecting?.text = getString(R.string.stop)
+    }
+
+    override fun showImuCollectionStarted() {
+        imu_button_start_collecting?.text = getString(R.string.stop)
     }
 
     override fun showCollectionStopped() {
-        button_start_collecting?.text = getString(R.string.start_collecting)
+        button_start_collecting?.text = getString(R.string.start)
+    }
+
+    override fun showImuCollectionStopped() {
+        imu_button_start_collecting?.text = getString(R.string.start)
     }
 
     override fun showCollectedPoints(totalPoints: Int) {
         points_count.text = totalPoints.toString()
     }
 
-    override fun enableResetButton() {
-        button_reset_collecting.isEnabled = true
+    override fun showImuCollectedPoints(totalPoints: Int) {
+        imu_points_count.text = totalPoints.toString()
     }
 
-    override fun disableResetButton() {
-        button_reset_collecting.isEnabled = false
+    override fun enableSaveButton() {
+        button_save_collecting.isEnabled = true
     }
 
-    override fun hideSaveArea() {
-        button_save.visibility = View.INVISIBLE
-        button_share.visibility = View.INVISIBLE
-        save_export_title.visibility = View.INVISIBLE
-        save_export_subtitle.visibility = View.INVISIBLE
+    override fun enableImuSaveButton() {
+        imu_button_save_collecting.isEnabled = true
     }
 
-    override fun showSaveArea() {
-        button_save.visibility = View.VISIBLE
-        button_share.visibility = View.VISIBLE
-        save_export_title.visibility = View.VISIBLE
-        save_export_subtitle.visibility = View.VISIBLE
+    override fun disableSaveButton() {
+        button_save_collecting.isEnabled = false
+    }
+
+    override fun disableImuSaveButton() {
+        imu_button_save_collecting.isEnabled = false
     }
 
     override fun sharePlainText(content: String) {
@@ -129,11 +148,15 @@ class ExportFragment : BaseFragment<ExportContract.Presenter>(), ExportContract.
         }
     }
 
+    @SuppressLint("SimpleDateFormat")
     private fun writeToFile(content: String) {
+        val sdf = SimpleDateFormat("dd-MM-yyyy HH:mm:ss")
+        val date = sdf.format(Date())
+
         val storageDir =
-            File("${Environment.getExternalStorageDirectory().absolutePath}/myo_emg")
+            File("${Environment.getExternalStorageDirectory().absolutePath}/Myo_Wygenerowane_Dane")
         storageDir.mkdir()
-        val outfile = File(storageDir, "myo_emg_export_${System.currentTimeMillis()}.csv")
+        val outfile = File(storageDir, "MyoData $date.csv")
         val fileOutputStream = FileOutputStream(outfile)
         fileOutputStream.write(content.toByteArray())
         fileOutputStream.close()

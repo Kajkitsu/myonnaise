@@ -15,6 +15,7 @@ import io.reactivex.Flowable
 import io.reactivex.Observable
 import io.reactivex.processors.PublishProcessor
 import io.reactivex.subjects.BehaviorSubject
+import java.nio.ByteBuffer
 import java.util.LinkedList
 import java.util.concurrent.TimeUnit
 
@@ -57,18 +58,24 @@ class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
 
     // Subjects for publishing outside Connection Status, Control Status and the Data (Float Arrays).
     internal val connectionStatusSubject: BehaviorSubject<MyoStatus> =
-        BehaviorSubject.createDefault(MyoStatus.DISCONNECTED)
+            BehaviorSubject.createDefault(MyoStatus.DISCONNECTED)
     internal val controlStatusSubject: BehaviorSubject<MyoControlStatus> =
-        BehaviorSubject.createDefault(MyoControlStatus.NOT_STREAMING)
-    internal val dataProcessor: PublishProcessor<FloatArray> = PublishProcessor.create()
+            BehaviorSubject.createDefault(MyoControlStatus.NOT_STREAMING)
+    internal val dataEmgProcessor: PublishProcessor<FloatArray> = PublishProcessor.create()
+//    internal val dataImuOrientationProcessor: PublishProcessor<FloatArray> = PublishProcessor.create()
+//    internal val dataImuAccelerometerProcessor: PublishProcessor<FloatArray> = PublishProcessor.create()
+    internal val dataImuProcessor: PublishProcessor<FloatArray> = PublishProcessor.create()
 
     internal var gatt: BluetoothGatt? = null
-    private var byteReader = ByteReader()
+    private var byteReaderEmg = ByteReader()
+    private var byteReaderImu = ByteReader()
 
     private var serviceControl: BluetoothGattService? = null
     internal var characteristicCommand: BluetoothGattCharacteristic? = null
     private var characteristicInfo: BluetoothGattCharacteristic? = null
     private var serviceEmg: BluetoothGattService? = null
+    private var serviceImu: BluetoothGattService? = null
+    private var characteristicImu0: BluetoothGattCharacteristic? = null
     private var characteristicEmg0: BluetoothGattCharacteristic? = null
     private var characteristicEmg1: BluetoothGattCharacteristic? = null
     private var characteristicEmg2: BluetoothGattCharacteristic? = null
@@ -102,8 +109,8 @@ class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
      * @return true if this object is connected to a device
      */
     fun isConnected() =
-        connectionStatusSubject.value == MyoStatus.CONNECTED ||
-            connectionStatusSubject.value == MyoStatus.READY
+            connectionStatusSubject.value == MyoStatus.CONNECTED ||
+                    connectionStatusSubject.value == MyoStatus.READY
 
     /**
      * @return true if the device is currently streaming
@@ -127,13 +134,40 @@ class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
      * Data is delivered as a FloatArray of size [MYO_CHANNELS].
      * If frequency is set (!= 0) then sub-sampling is performed to achieve the desired frequency.
      */
-    fun dataFlowable(): Flowable<FloatArray> {
+    fun dataFlowableEmg(): Flowable<FloatArray> {
         return if (frequency == 0) {
-            dataProcessor
+            dataEmgProcessor
         } else {
-            dataProcessor.sample((1000 / frequency).toLong(), TimeUnit.MILLISECONDS)
+            dataEmgProcessor.sample((1000 / frequency).toLong(), TimeUnit.MILLISECONDS)
         }
     }
+
+//    fun dataFlowableImuOrientation(): Flowable<FloatArray> {
+//        return if (frequency == 0) {
+//            dataImuOrientationProcessor
+//        } else {
+//            dataImuOrientationProcessor.sample((1000 / frequency).toLong(), TimeUnit.MILLISECONDS)
+//        }
+//    }
+//
+//    fun dataFlowableImuAccelerometer(): Flowable<FloatArray> {
+//        return if (frequency == 0) {
+//            dataImuAccelerometerProcessor
+//        } else {
+//            dataImuAccelerometerProcessor.sample((1000 / frequency).toLong(), TimeUnit.MILLISECONDS)
+//        }
+//    }
+
+    fun dataFlowableImuGyro(): Flowable<FloatArray> {
+        return if (frequency == 0) {
+            dataImuProcessor
+        } else {
+            dataImuProcessor.sample((1000 / frequency).toLong(), TimeUnit.MILLISECONDS)
+        }
+    }
+
+
+
 
     /**
      * Send a [Command] to the device. Before calling this please make sure the device is connected.
@@ -185,10 +219,10 @@ class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
             characteristicEmg3 = serviceEmg?.getCharacteristic(CHAR_EMG_3_ID)
 
             val emgCharacteristics = listOf(
-                characteristicEmg0,
-                characteristicEmg1,
-                characteristicEmg2,
-                characteristicEmg3
+                    characteristicEmg0,
+                    characteristicEmg1,
+                    characteristicEmg2,
+                    characteristicEmg3
             )
 
             emgCharacteristics.forEach { emgCharacteristic ->
@@ -203,6 +237,33 @@ class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
                 }
             }
         }
+
+
+        // Find GATT Service IMU
+        serviceImu = gatt.getService(SERVICE_IMU_DATA_ID)
+        serviceImu?.apply {
+            characteristicImu0 = serviceImu?.getCharacteristic(CHAR_IMU_DATA_ID)
+
+            val imuCharacteristics = listOf(
+                    characteristicImu0
+            )
+
+            imuCharacteristics.forEach { imuCharacteristic ->
+                imuCharacteristic?.apply {
+                    if (gatt.setCharacteristicNotification(imuCharacteristic, true)) {
+                        val descriptor = imuCharacteristic.getDescriptor(CHAR_CLIENT_CONFIG)
+                        descriptor?.apply {
+                            descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                            writeDescriptor(gatt, descriptor)
+                        }
+                    }
+                }
+                Log.d(TAG, "imuCharacteristic?.apply")
+            }
+
+
+        }
+
 
         // Find GATT Service Control
         serviceControl = gatt.getService(SERVICE_CONTROL_ID)
@@ -258,17 +319,17 @@ class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
                 byteReader.byteData = data
                 // TODO We might expose these to the public
                 val callbackMsg =
-                    String.format(
-                        "Serial Number     : %02x:%02x:%02x:%02x:%02x:%02x",
-                        byteReader.byte, byteReader.byte, byteReader.byte,
-                        byteReader.byte, byteReader.byte, byteReader.byte
-                    ) +
-                        '\n'.toString() + String.format("Unlock            : %d", byteReader.short) +
-                        '\n'.toString() + String.format(
-                        "Classifier builtin:%d active:%d (have:%d)",
-                        byteReader.byte, byteReader.byte, byteReader.byte
-                    ) +
-                        '\n'.toString() + String.format("Stream Type       : %d", byteReader.byte)
+                        String.format(
+                                "Serial Number     : %02x:%02x:%02x:%02x:%02x:%02x",
+                                byteReader.byte, byteReader.byte, byteReader.byte,
+                                byteReader.byte, byteReader.byte, byteReader.byte
+                        ) +
+                                '\n'.toString() + String.format("Unlock            : %d", byteReader.short) +
+                                '\n'.toString() + String.format(
+                                "Classifier builtin:%d active:%d (have:%d)",
+                                byteReader.byte, byteReader.byte, byteReader.byte
+                        ) +
+                                '\n'.toString() + String.format("Stream Type       : %d", byteReader.byte)
                 Log.d(TAG, "MYO info string: $callbackMsg")
             }
         }
@@ -282,12 +343,35 @@ class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
 
         if (characteristic.uuid.toString().endsWith(CHAR_EMG_POSTFIX)) {
             val emgData = characteristic.value
-            byteReader.byteData = emgData
+            byteReaderEmg.byteData = emgData
 
             // We receive 16 bytes of data. Let's cut them in 2 and deliver both of them.
-            dataProcessor.onNext(byteReader.getBytes(EMG_ARRAY_SIZE / 2))
-            dataProcessor.onNext(byteReader.getBytes(EMG_ARRAY_SIZE / 2))
+            dataEmgProcessor.onNext(byteReaderEmg.getBytes(EMG_ARRAY_SIZE / 2))
+            dataEmgProcessor.onNext(byteReaderEmg.getBytes(EMG_ARRAY_SIZE / 2))
+           // Log.d(TAG, "dataEmgProcessor. emgData "+emgData.size)
         }
+
+
+        if (characteristic.uuid.toString() == CHAR_IMU_DATA_ID.toString()) {
+            val imuData = characteristic.value
+
+            byteReaderImu.byteData = imuData
+
+            dataImuProcessor.onNext(byteReaderImu.getBytes(10))
+         //   dataImuProcessor.onNext(byteReaderImu.getBytes(10))
+
+//            for (x in 0..2){
+//                dataImuAccelerometerProcessor.onNext(byteReaderEmg.getBytes(1))
+//            }
+//            for (x in 0..2){
+//                dataImuProcessor.onNext(byteReaderEmg.getBytes(1))
+//            }
+          //  Log.d(TAG, "byteReaderImu = imuData "+imuData.size)
+
+
+        }
+
+
 
         // Finally check if keep alive makes sense.
         val currentTimeMillis = System.currentTimeMillis()

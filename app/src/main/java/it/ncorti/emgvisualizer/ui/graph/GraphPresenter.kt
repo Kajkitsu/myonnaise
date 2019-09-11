@@ -8,9 +8,12 @@ import it.ncorti.emgvisualizer.dagger.DeviceManager
 class GraphPresenter(
     override val view: GraphContract.View,
     private val deviceManager: DeviceManager
-) : GraphContract.Presenter(view) {
+) : GraphContract.Presenter(view){
 
-    private var dataSubscription: Disposable? = null
+    private var dataSubscriptionEmg: Disposable? = null
+    private var dataSubscriptionImu: Disposable? = null
+//    private var dataSubscriptionImuAce: Disposable? = null
+//    private var dataSubscriptionImuGyr: Disposable? = null
 
     override fun create() {}
 
@@ -18,18 +21,56 @@ class GraphPresenter(
         deviceManager.myo?.apply {
             if (this.isStreaming()) {
                 view.hideNoStreamingMessage()
-                dataSubscription?.apply {
+                dataSubscriptionEmg?.apply {
                     if (!this.isDisposed) this.dispose()
                 }
-                dataSubscription = this.dataFlowable()
+                dataSubscriptionEmg = this.dataFlowableEmg()
                     .subscribeOn(Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())
                     .doOnSubscribe {
                         view.startGraph(true)
                     }
                     .subscribe {
-                        view.showData(it)
+                        view.showDataEmg(it)
                     }
+
+
+                dataSubscriptionImu?.apply {
+                    if (!this.isDisposed) this.dispose()
+                }
+                dataSubscriptionImu = this.dataFlowableImuGyro()
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .doOnSubscribe {
+                            view.startGraph(true)
+                        }
+                        .subscribe {
+                            view.showDataImu(it)
+                        }
+//                dataSubscriptionImuAce?.apply {
+//                    if (!this.isDisposed) this.dispose()
+//                }
+//                dataSubscriptionImuAce = this.dataFlowableImuAccelerometer()
+//                        .subscribeOn(Schedulers.io())
+//                        .observeOn(AndroidSchedulers.mainThread())
+//                        .doOnSubscribe {
+//                            view.startGraph(true)
+//                        }
+//                        .subscribe {
+//                            view.showDataEmg(it)
+//                        }
+//                dataSubscriptionImuGyr?.apply {
+//                    if (!this.isDisposed) this.dispose()
+//                }
+//                dataSubscriptionImuGyr = this.dataFlowableImuGyro()
+//                        .subscribeOn(Schedulers.io())
+//                        .observeOn(AndroidSchedulers.mainThread())
+//                        .doOnSubscribe {
+//                            view.startGraph(true)
+//                        }
+//                        .subscribe {
+//                            view.showDataEmg(it)
+//                        }
             } else {
                 view.showNoStreamingMessage()
             }
@@ -38,6 +79,9 @@ class GraphPresenter(
 
     override fun stop() {
         view.startGraph(false)
-        dataSubscription?.dispose()
+        dataSubscriptionImu?.dispose()
+ //       dataSubscriptionImuAce?.dispose()
+//        dataSubscriptionImuGyr?.dispose()
+        dataSubscriptionEmg?.dispose()
     }
 }

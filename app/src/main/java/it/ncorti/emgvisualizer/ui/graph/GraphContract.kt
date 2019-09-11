@@ -7,7 +7,9 @@ interface GraphContract {
 
     interface View : BaseView {
 
-        fun showData(data: FloatArray)
+        fun showDataEmg(data: FloatArray)
+
+        fun showDataImu(data: FloatArray)
 
         fun startGraph(running: Boolean)
 

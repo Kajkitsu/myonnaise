@@ -7,24 +7,27 @@ interface ExportContract {
 
     interface View : BaseView {
         fun enableStartCollectingButton()
+        fun enableImuStartCollectingButton()
 
         fun disableStartCollectingButton()
+        fun disableImuStartCollectingButton()
 
         fun showNotStreamingErrorMessage()
 
         fun showCollectionStarted()
+        fun showImuCollectionStarted()
 
         fun showCollectionStopped()
+        fun showImuCollectionStopped()
 
         fun showCollectedPoints(totalPoints: Int)
+        fun showImuCollectedPoints(totalPoints: Int)
 
-        fun enableResetButton()
+        fun enableSaveButton()
+        fun enableImuSaveButton()
 
-        fun disableResetButton()
-
-        fun hideSaveArea()
-
-        fun showSaveArea()
+        fun disableSaveButton()
+        fun disableImuSaveButton()
 
         fun saveCsvFile(content: String)
 
@@ -34,11 +37,9 @@ interface ExportContract {
     abstract class Presenter(override val view: BaseView) : BasePresenter<BaseView>(view) {
 
         abstract fun onCollectionTogglePressed()
-
-        abstract fun onResetPressed()
+        abstract fun onImuCollectionTogglePressed()
 
         abstract fun onSavePressed()
-
-        abstract fun onSharePressed()
+        abstract fun onImuSavePressed()
     }
 }

@@ -2,11 +2,7 @@
 
 package it.ncorti.emgvisualizer.ui.control
 
-import com.ncorti.myonnaise.CommandList
-import com.ncorti.myonnaise.MYO_MAX_FREQUENCY
-import com.ncorti.myonnaise.MyoControlStatus
-import com.ncorti.myonnaise.MyoStatus
-import com.ncorti.myonnaise.Myonnaise
+import com.ncorti.myonnaise.*
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
@@ -95,7 +91,9 @@ class ControlDevicePresenter(
     override fun onStreamingToggleClicked() {
         deviceManager.myo?.apply {
             if (!this.isStreaming()) {
-                this.sendCommand(CommandList.emgFilteredOnly())
+                this.sendCommand(CommandList.setStreaming(emgMode = COMAND_EMG_RAW, imuMode = COMAND_IMU_DATA)
+                        //CommandList.emgFilteredOnly()
+                         )
             } else {
                 this.sendCommand(CommandList.stopStreaming())
             }
@@ -106,9 +104,9 @@ class ControlDevicePresenter(
         deviceManager.myo?.apply {
             this.sendCommand(
                 when (duration) {
-                    1 -> CommandList.vibration1()
-                    2 -> CommandList.vibration2()
-                    else -> CommandList.vibration3()
+                    1 -> CommandList.vibrationShort()
+                    2 -> CommandList.vibrationMedium()
+                    else -> CommandList.vibrationLong()
                 }
             )
         }

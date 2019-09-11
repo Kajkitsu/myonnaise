@@ -45,7 +45,7 @@ class GraphPresenterTest {
     @Test
     fun onStart_withDeviceStreaming_hideTheErrorMessage() {
         whenever(mockedDeviceManager.myo?.isStreaming()).thenReturn(true)
-        whenever(mockedDeviceManager.myo?.dataFlowable()).thenReturn(Flowable.empty())
+        whenever(mockedDeviceManager.myo?.dataFlowableEmg()).thenReturn(Flowable.empty())
 
         testPresenter.start()
 
@@ -55,7 +55,7 @@ class GraphPresenterTest {
     @Test
     fun onStart_withDeviceStreaming_startTheGraph() {
         whenever(mockedDeviceManager.myo?.isStreaming()).thenReturn(true)
-        whenever(mockedDeviceManager.myo?.dataFlowable()).thenReturn(Flowable.empty())
+        whenever(mockedDeviceManager.myo?.dataFlowableEmg()).thenReturn(Flowable.empty())
 
         testPresenter.start()
 
@@ -65,7 +65,7 @@ class GraphPresenterTest {
     @Test
     fun onStart_withDeviceStreaming_populateTheGraph() {
         whenever(mockedDeviceManager.myo?.isStreaming()).thenReturn(true)
-        whenever(mockedDeviceManager.myo?.dataFlowable())
+        whenever(mockedDeviceManager.myo?.dataFlowableEmg())
             .thenReturn(
                 Flowable.just(
                     floatArrayOf(1.0f),
@@ -76,9 +76,9 @@ class GraphPresenterTest {
 
         testPresenter.start()
 
-        verify(mockedView).showData(floatArrayOf(1.0f))
-        verify(mockedView).showData(floatArrayOf(2.0f))
-        verify(mockedView).showData(floatArrayOf(3.0f))
+        verify(mockedView).showDataEmg(floatArrayOf(1.0f))
+        verify(mockedView).showDataEmg(floatArrayOf(2.0f))
+        verify(mockedView).showDataEmg(floatArrayOf(3.0f))
     }
 
     @Test

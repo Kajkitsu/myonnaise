@@ -169,21 +169,21 @@ class ControlDevicePresenterTest {
     fun onVibrateClicked_withShortVibration_sendShortVibrationCommand() {
         testPresenter.onVibrateClicked(1)
 
-        verify(mockedMyo).sendCommand(CommandList.vibration1())
+        verify(mockedMyo).sendCommand(CommandList.vibrationShort())
     }
 
     @Test
     fun onVibrateClicked_withMediumVibration_sendMediumVibrationCommand() {
         testPresenter.onVibrateClicked(2)
 
-        verify(mockedMyo).sendCommand(CommandList.vibration2())
+        verify(mockedMyo).sendCommand(CommandList.vibrationMedium())
     }
 
     @Test
     fun onVibrateClicked_withLongVibration_sendLongVibrationCommand() {
         testPresenter.onVibrateClicked(3)
 
-        verify(mockedMyo).sendCommand(CommandList.vibration3())
+        verify(mockedMyo).sendCommand(CommandList.vibrationLong())
     }
 
     @Test

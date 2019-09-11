@@ -13,6 +13,7 @@ import com.github.paolorotolo.appintro.AppIntro
 import com.github.paolorotolo.appintro.AppIntroFragment
 import com.github.paolorotolo.appintro.model.SliderPage
 import it.ncorti.emgvisualizer.R
+import kotlinx.android.synthetic.main.layout_control_device.*
 
 private const val PREFS_GLOBAL = "global"
 private const val KEY_COMPLETED_ONBOARDING = "completed_onboarding"
@@ -48,18 +49,25 @@ class IntroActivity : AppIntro() {
         addSlide(AppIntroFragment.newInstance(page2))
 
         val page3 = SliderPage()
-        page3.title = getString(R.string.graph)
+        page3.title = getString(R.string.graph_emg)
         page3.description = getString(R.string.onboarding_description_3)
         page3.imageDrawable = R.drawable.onboarding_3
         page3.bgColor = backgroundColor
         addSlide(AppIntroFragment.newInstance(page3))
 
         val page4 = SliderPage()
-        page4.title = getString(R.string.export)
+        page4.title = getString(R.string.graph_imu)
         page4.description = getString(R.string.onboarding_description_4)
-        page4.imageDrawable = R.drawable.onboarding_4
+        page4.imageDrawable = R.drawable.onboarding_3
         page4.bgColor = backgroundColor
         addSlide(AppIntroFragment.newInstance(page4))
+
+        val page5 = SliderPage()
+        page5.title = getString(R.string.export)
+        page5.description = getString(R.string.onboarding_description_5)
+        page5.imageDrawable = R.drawable.onboarding_4
+        page5.bgColor = backgroundColor
+        addSlide(AppIntroFragment.newInstance(page5))
 
         setBarColor(ContextCompat.getColor(this, R.color.primaryDarkColor))
         setSeparatorColor(ContextCompat.getColor(this, R.color.primaryLightColor))
@@ -67,6 +75,8 @@ class IntroActivity : AppIntro() {
         isProgressButtonEnabled = true
         setVibrate(true)
         setVibrateIntensity(VIBRATE_INTENSITY)
+
+
     }
 
     override fun onSkipPressed(currentFragment: Fragment) {
@@ -124,4 +134,5 @@ class IntroActivity : AppIntro() {
         finish()
         startActivity(Intent(this, MainActivity::class.java))
     }
+
 }

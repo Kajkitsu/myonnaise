@@ -13,7 +13,9 @@ class ExportPresenter(
 ) : ExportContract.Presenter(view) {
 
     private val counter: AtomicInteger = AtomicInteger()
+    private val imuCounter: AtomicInteger = AtomicInteger()
     private val buffer: ArrayList<FloatArray> = arrayListOf()
+    private val imuBuffer: ArrayList<FloatArray> = arrayListOf()
 
     internal var dataSubscription: Disposable? = null
 
@@ -21,11 +23,14 @@ class ExportPresenter(
 
     override fun start() {
         view.showCollectedPoints(counter.get())
+        view.showImuCollectedPoints(imuCounter.get())
         deviceManager.myo?.apply {
             if (this.isStreaming()) {
                 view.enableStartCollectingButton()
+                view.enableImuStartCollectingButton()
             } else {
                 view.disableStartCollectingButton()
+                view.disableImuStartCollectingButton()
             }
         }
     }
@@ -33,18 +38,19 @@ class ExportPresenter(
     override fun stop() {
         dataSubscription?.dispose()
         view.showCollectionStopped()
+        view.showImuCollectionStopped()
     }
 
     override fun onCollectionTogglePressed() {
         deviceManager.myo?.apply {
             if (this.isStreaming()) {
                 if (dataSubscription == null || dataSubscription?.isDisposed == true) {
-                    dataSubscription = this.dataFlowable()
+                    dataSubscription = this.dataFlowableEmg()
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .doOnSubscribe {
                             view.showCollectionStarted()
-                            view.disableResetButton()
+                            view.disableSaveButton()
                         }
                         .subscribe {
                             buffer.add(it)
@@ -52,8 +58,7 @@ class ExportPresenter(
                         }
                 } else {
                     dataSubscription?.dispose()
-                    view.enableResetButton()
-                    view.showSaveArea()
+                    view.enableSaveButton()
                     view.showCollectionStopped()
                 }
             } else {
@@ -62,21 +67,48 @@ class ExportPresenter(
         }
     }
 
-    override fun onResetPressed() {
-        counter.set(0)
-        buffer.clear()
-        view.showCollectedPoints(0)
-        dataSubscription?.dispose()
-        view.hideSaveArea()
-        view.disableResetButton()
+    override fun onImuCollectionTogglePressed() {
+        deviceManager.myo?.apply {
+            if (this.isStreaming()) {
+                if (dataSubscription == null || dataSubscription?.isDisposed == true) {
+                    dataSubscription = this.dataFlowableImuGyro()
+                            .subscribeOn(Schedulers.io())
+                            .observeOn(AndroidSchedulers.mainThread())
+                            .doOnSubscribe {
+                                view.showImuCollectionStarted()
+                                view.disableImuSaveButton()
+                            }
+                            .subscribe {
+                                imuBuffer.add(it)
+                                view.showImuCollectedPoints(imuCounter.incrementAndGet())
+                            }
+                } else {
+                    dataSubscription?.dispose()
+                    view.enableImuSaveButton()
+                    view.showImuCollectionStopped()
+                }
+            } else {
+                view.showNotStreamingErrorMessage()
+            }
+        }
     }
 
     override fun onSavePressed() {
+        counter.set(0)
         view.saveCsvFile(createCsv(buffer))
+        buffer.clear()
+        view.showCollectedPoints(0)
+        dataSubscription?.dispose()
+        view.disableSaveButton()
     }
 
-    override fun onSharePressed() {
-        view.sharePlainText(createCsv(buffer))
+    override fun onImuSavePressed() {
+        imuCounter.set(0)
+        view.saveCsvFile(createCsv(imuBuffer))
+        imuBuffer.clear()
+        view.showImuCollectedPoints(0)
+        dataSubscription?.dispose()
+        view.disableImuSaveButton()
     }
 
     @VisibleForTesting
@@ -85,7 +117,7 @@ class ExportPresenter(
         buffer.forEach {
             it.forEach {
                 stringBuilder.append(it)
-                stringBuilder.append(";")
+                stringBuilder.append(",")
             }
             stringBuilder.append("\n")
         }
