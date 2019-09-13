@@ -2,6 +2,10 @@ package com.ncorti.myonnaise
 
 import java.util.UUID
 
+internal const val TAG = "MYO"
+
+
+
 /** Service ID - MYO CONTROL  */
 val SERVICE_CONTROL_ID: UUID = UUID.fromString("d5060001-a904-deb9-4748-2c7f4a124842")
 /** Service ID - MYO EMG DATA  */
@@ -43,7 +47,6 @@ val DATA_DEVICE_NAME_ID: UUID = UUID.fromString("d5062a00-a904-deb9-4748-2c7f4a1
 
 /** Postfix for all the EMG Characteristic.*/
 const val CHAR_EMG_POSTFIX = "05-a904-deb9-4748-2c7f4a124842"
-
 /**
  * Android Characteristic ID
  * (from Android Samples/BluetoothLeGatt/SampleGattAttributes.CLIENT_CHARACTERISTIC_CONFIG)
@@ -68,55 +71,33 @@ const val MYO_MIN_VALUE = -150.0f
 /** Keep Alive in MS. We will send an [CommandList.unSleep] command every [KEEP_ALIVE_INTERVAL_MS] */
 const val KEEP_ALIVE_INTERVAL_MS = 10000
 
-/** Myo comand list - Vibration */
-const val COMAND_VIBRATION_NONE = 0
-const val COMAND_VIBRATION_SHORT = 1
-const val COMAND_VIBRATION_MEDIUM = 2
-const val COMAND_VIBRATION_LONG = 3
+enum class VibrationType(val value: Int) {
+    NONE(0),
+    SHORT(1),
+    MEDIUM(2),
+    LONG(3)
+}
 
-/** Myo comand list - Emg */
-/** No emg data is delivered */
-const val COMAND_EMG_NONE = 0
+enum class EmgModeType(val value: Int) {
+    NONE(0),/** No emg data is delivered */
+    FILTERED(2),/** EMG data with powerline interface being filtered out.*/
+    RAW(3)/** Raw unfiltered EMG data, this mode will implicitly set {@link eu.darken.myolib.MyoCmds.ClassifierMode#DISABLED}*/
+}
 
-/** EMG data with powerline interface being filtered out.*/
-const val COMAND_EMG_FILTERED = 2
+enum class ImuModeType(val value: Int) {
+    NONE(0),/**Do not send IMU data or events.*/
+    DATA(1),/**Send IMU data streams (accelerometer, gyroscope, and orientation).*/
+    EVENTS(2),/** Send motion events detected by the IMU (e.g. taps).*/
+    ALL(3),/** Send both IMU data streams and motion events..*/
+    RAW(4)/** Send raw IMU data streams. */
+}
 
-/** Raw unfiltered EMG data, this mode will implicitly set {@link eu.darken.myolib.MyoCmds.ClassifierMode#DISABLED}*/
-const val COMAND_EMG_RAW = 3
+enum class ClassifierMode(val value: Int) {
+    DISABLE(0),/** Disable and reset the internal state of the onboard classifier. */
+    ENABLE(1)/** Send classifier events (poses and arm events).*/
+}
 
-
-/** Myo comand list - Imu */
-/**Do not send IMU data or events.*/
-const val COMAND_IMU_NONE = 0
-
-/**Send IMU data streams (accelerometer, gyroscope, and orientation).*/
-const val COMAND_IMU_DATA = 1
-
-/** Send motion events detected by the IMU (e.g. taps).*/
-const val COMAND_IMU_EVENTS = 2
-
-/** Send both IMU data streams and motion events..*/
-const val COMAND_IMU_ALL = 3
-
-/** Send raw IMU data streams. */
-const val COMAND_IMU_RAW = 4
-
-
-/** Myo comand list - CLassifierMode */
-/** Disable and reset the internal state of the onboard classifier. */
-const val COMAND_CLASSIFIER_DISABLE = 0
-
-/** Send classifier events (poses and arm events).*/
-const val COMAND_CLASSIFIER_ENABLE = 1
-
-/** Myo comand list - SleepMode */
-/** Go to sleep/standby after a few seconds of inactivity.*/
-const val COMAND_SLEEP_MODE_NORMAL = 0
-/** Never go into sleep/standby while the device is connected. */
-const val COMAND_SLEEP_MODE_NEVER = 1
-
-
-
-
-internal const val TAG = "MYO"
-
+enum class SleppMode(val value: Int) {
+    NORMAL(0),/** Go to sleep/standby after a few seconds of inactivity.*/
+    NEVER(1)/** Never go into sleep/standby while the device is connected. */
+}

@@ -128,7 +128,6 @@ class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
      * Register to this Observable to be notified when the device is Streaming/Not Streaming.
      */
     fun controlObservable(): Observable<MyoControlStatus> = controlStatusSubject
-
     /**
      * Get a [Flowable] where you can receive data from the device.
      * Data is delivered as a FloatArray of size [MYO_CHANNELS].
@@ -142,22 +141,6 @@ class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
         }
     }
 
-//    fun dataFlowableImuOrientation(): Flowable<FloatArray> {
-//        return if (frequency == 0) {
-//            dataImuOrientationProcessor
-//        } else {
-//            dataImuOrientationProcessor.sample((1000 / frequency).toLong(), TimeUnit.MILLISECONDS)
-//        }
-//    }
-//
-//    fun dataFlowableImuAccelerometer(): Flowable<FloatArray> {
-//        return if (frequency == 0) {
-//            dataImuAccelerometerProcessor
-//        } else {
-//            dataImuAccelerometerProcessor.sample((1000 / frequency).toLong(), TimeUnit.MILLISECONDS)
-//        }
-//    }
-
     fun dataFlowableImuGyro(): Flowable<FloatArray> {
         return if (frequency == 0) {
             dataImuProcessor
@@ -169,38 +152,11 @@ class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
 
 
 
+
     /**
      * Send a [Command] to the device. Before calling this please make sure the device is connected.
      */
-    fun sendCommand(command: Command): Boolean {
-        characteristicCommand?.apply {
-            this.value = command
-            if (this.properties == BluetoothGattCharacteristic.PROPERTY_WRITE) {
-                if (command.isStartStreamingCommand()) {
-                    controlStatusSubject.onNext(MyoControlStatus.STREAMING)
-                } else if (command.isStopStreamingCommand()) {
-                    controlStatusSubject.onNext(MyoControlStatus.NOT_STREAMING)
-                }
-                gatt?.writeCharacteristic(this)
-                return true
-            }
-        }
-        return false
-    }
 
-    override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
-        super.onConnectionStateChange(gatt, status, newState)
-        Log.d(TAG, "onConnectionStateChange: $status -> $newState")
-        if (newState == BluetoothProfile.STATE_CONNECTED) {
-            Log.d(TAG, "Bluetooth Connected")
-            connectionStatusSubject.onNext(MyoStatus.CONNECTED)
-            gatt.discoverServices()
-        } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-            // Calling disconnect() here will cause to release the GATT resources.
-            disconnect()
-            Log.d(TAG, "Bluetooth Disconnected")
-        }
-    }
 
     @Suppress("NestedBlockDepth", "ComplexMethod")
     override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
@@ -211,6 +167,66 @@ class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
             return
         }
         // Find GATT Service EMG
+        FindGattServiceEmg(gatt)
+
+
+        // Find GATT Service IMU
+        FindGattServiceImu(gatt)
+
+
+        // Find GATT Service Control
+        FindGattServiceServiceControl(gatt)
+    }
+
+    private fun FindGattServiceServiceControl(gatt: BluetoothGatt) {
+        serviceControl = gatt.getService(SERVICE_CONTROL_ID)
+        serviceControl?.apply {
+            characteristicInfo = this.getCharacteristic(CHAR_INFO_ID)
+            characteristicInfo?.apply {
+                // if there is only 1 item in the queue, then read it.  If more than 1, we handle asynchronously in the
+                // callback. GIVE PRECEDENCE to descriptor writes. They must all finish first.
+                readQueue.add(this)
+                if (readQueue.size == 1 && writeQueue.size == 0) {
+                    gatt.readCharacteristic(this)
+                }
+            }
+            characteristicCommand = this.getCharacteristic(CHAR_COMMAND_ID)
+            characteristicCommand?.apply {
+                lastKeepAlive = System.currentTimeMillis()
+                sendCommand(CommandList.sleepMode(SleppMode.NEVER))
+                // We send the ready event as soon as the characteristicCommand is ready.
+                connectionStatusSubject.onNext(MyoStatus.READY)
+            }
+        }
+    }
+
+    private fun FindGattServiceImu(gatt: BluetoothGatt) {
+        serviceImu = gatt.getService(SERVICE_IMU_DATA_ID)
+        serviceImu?.apply {
+            characteristicImu0 = serviceImu?.getCharacteristic(CHAR_IMU_DATA_ID)
+
+            val imuCharacteristics = listOf(
+                    characteristicImu0
+            )
+
+            imuCharacteristics.forEach { imuCharacteristic ->
+                imuCharacteristic?.apply {
+                    if (gatt.setCharacteristicNotification(imuCharacteristic, true)) {
+                        val descriptor = imuCharacteristic.getDescriptor(CHAR_CLIENT_CONFIG)
+                        descriptor?.apply {
+                            descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                            writeDescriptor(gatt, descriptor)
+                        }
+                    }
+                }
+                Log.d(TAG, "imuCharacteristic?.apply")
+            }
+
+
+        }
+    }
+
+    private fun FindGattServiceEmg(gatt: BluetoothGatt) {
         serviceEmg = gatt.getService(SERVICE_EMG_DATA_ID)
         serviceEmg?.apply {
             characteristicEmg0 = serviceEmg?.getCharacteristic(CHAR_EMG_0_ID)
@@ -237,73 +253,6 @@ class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
                 }
             }
         }
-
-
-        // Find GATT Service IMU
-        serviceImu = gatt.getService(SERVICE_IMU_DATA_ID)
-        serviceImu?.apply {
-            characteristicImu0 = serviceImu?.getCharacteristic(CHAR_IMU_DATA_ID)
-
-            val imuCharacteristics = listOf(
-                    characteristicImu0
-            )
-
-            imuCharacteristics.forEach { imuCharacteristic ->
-                imuCharacteristic?.apply {
-                    if (gatt.setCharacteristicNotification(imuCharacteristic, true)) {
-                        val descriptor = imuCharacteristic.getDescriptor(CHAR_CLIENT_CONFIG)
-                        descriptor?.apply {
-                            descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                            writeDescriptor(gatt, descriptor)
-                        }
-                    }
-                }
-                Log.d(TAG, "imuCharacteristic?.apply")
-            }
-
-
-        }
-
-
-        // Find GATT Service Control
-        serviceControl = gatt.getService(SERVICE_CONTROL_ID)
-        serviceControl?.apply {
-            characteristicInfo = this.getCharacteristic(CHAR_INFO_ID)
-            characteristicInfo?.apply {
-                // if there is only 1 item in the queue, then read it.  If more than 1, we handle asynchronously in the
-                // callback. GIVE PRECEDENCE to descriptor writes. They must all finish first.
-                readQueue.add(this)
-                if (readQueue.size == 1 && writeQueue.size == 0) {
-                    gatt.readCharacteristic(this)
-                }
-            }
-            characteristicCommand = this.getCharacteristic(CHAR_COMMAND_ID)
-            characteristicCommand?.apply {
-                lastKeepAlive = System.currentTimeMillis()
-                sendCommand(CommandList.unSleep())
-                // We send the ready event as soon as the characteristicCommand is ready.
-                connectionStatusSubject.onNext(MyoStatus.READY)
-            }
-        }
-    }
-
-    internal fun writeDescriptor(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor) {
-        writeQueue.add(descriptor)
-        // When writing, if the queue is empty, write immediately.
-        if (writeQueue.size == 1) {
-            gatt.writeDescriptor(descriptor)
-        }
-    }
-
-    override fun onDescriptorWrite(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
-        super.onDescriptorWrite(gatt, descriptor, status)
-        Log.d(TAG, "onDescriptorWrite status: $status")
-        writeQueue.remove()
-        // if there is more to write, do it!
-        if (writeQueue.size > 0)
-            gatt.writeDescriptor(writeQueue.element())
-        else if (readQueue.size > 0)
-            gatt.readCharacteristic(readQueue.element())
     }
 
     override fun onCharacteristicRead(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
@@ -342,42 +291,97 @@ class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
         super.onCharacteristicChanged(gatt, characteristic)
 
         if (characteristic.uuid.toString().endsWith(CHAR_EMG_POSTFIX)) {
-            val emgData = characteristic.value
-            byteReaderEmg.byteData = emgData
-
-            // We receive 16 bytes of data. Let's cut them in 2 and deliver both of them.
-            dataEmgProcessor.onNext(byteReaderEmg.getBytes(EMG_ARRAY_SIZE / 2))
-            dataEmgProcessor.onNext(byteReaderEmg.getBytes(EMG_ARRAY_SIZE / 2))
-           // Log.d(TAG, "dataEmgProcessor. emgData "+emgData.size)
+            putEmgDataToDataProcessor(characteristic)
         }
 
 
         if (characteristic.uuid.toString() == CHAR_IMU_DATA_ID.toString()) {
-            val imuData = characteristic.value
-
-            byteReaderImu.byteData = imuData
-
-            dataImuProcessor.onNext(byteReaderImu.getBytes(10))
-         //   dataImuProcessor.onNext(byteReaderImu.getBytes(10))
-
-//            for (x in 0..2){
-//                dataImuAccelerometerProcessor.onNext(byteReaderEmg.getBytes(1))
-//            }
-//            for (x in 0..2){
-//                dataImuProcessor.onNext(byteReaderEmg.getBytes(1))
-//            }
-          //  Log.d(TAG, "byteReaderImu = imuData "+imuData.size)
-
-
+            putImuDataToDataProcessor(characteristic)
         }
-
-
 
         // Finally check if keep alive makes sense.
         val currentTimeMillis = System.currentTimeMillis()
         if (keepAlive && currentTimeMillis > lastKeepAlive + KEEP_ALIVE_INTERVAL_MS) {
             lastKeepAlive = currentTimeMillis
-            sendCommand(CommandList.unSleep())
+            sendCommand(CommandList.sleepMode(SleppMode.NEVER))
         }
     }
+
+    private fun putImuDataToDataProcessor(characteristic: BluetoothGattCharacteristic) {
+        val imuData = characteristic.value
+        byteReaderImu.byteData = imuData
+
+        dataImuProcessor.onNext(byteReaderImu.getBytes(10))
+        //   dataImuProcessor.onNext(byteReaderImu.getBytes(10))
+
+        //            for (x in 0..2){
+        //                dataImuAccelerometerProcessor.onNext(byteReaderEmg.getBytes(1))
+        //            }
+        //            for (x in 0..2){
+        //                dataImuProcessor.onNext(byteReaderEmg.getBytes(1))
+        //            }
+        //  Log.d(TAG, "byteReaderImu = imuData "+imuData.size)
+    }
+
+    private fun putEmgDataToDataProcessor(characteristic: BluetoothGattCharacteristic) {
+        val emgData = characteristic.value
+        byteReaderEmg.byteData = emgData
+
+        // We receive 16 bytes of data. Let's cut them in 2 and deliver both of them.
+        dataEmgProcessor.onNext(byteReaderEmg.getBytes(EMG_ARRAY_SIZE / 2))
+        dataEmgProcessor.onNext(byteReaderEmg.getBytes(EMG_ARRAY_SIZE / 2))
+        // Log.d(TAG, "dataEmgProcessor. emgData "+emgData.size)
+    }
+
+    internal fun writeDescriptor(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor) {
+        writeQueue.add(descriptor)
+        // When writing, if the queue is empty, write immediately.
+        if (writeQueue.size == 1) {
+            gatt.writeDescriptor(descriptor)
+        }
+    }
+
+    override fun onDescriptorWrite(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
+        super.onDescriptorWrite(gatt, descriptor, status)
+        Log.d(TAG, "onDescriptorWrite status: $status")
+        writeQueue.remove()
+        // if there is more to write, do it!
+        if (writeQueue.size > 0)
+            gatt.writeDescriptor(writeQueue.element())
+        else if (readQueue.size > 0)
+            gatt.readCharacteristic(readQueue.element())
+    }
+
+    fun sendCommand(command: Command): Boolean {
+        characteristicCommand?.apply {
+            this.value = command
+            if (this.properties == BluetoothGattCharacteristic.PROPERTY_WRITE) {
+                if (command.isStartStreamingCommand()) {
+                    controlStatusSubject.onNext(MyoControlStatus.STREAMING)
+                } else if (command.isStopStreamingCommand()) {
+                    controlStatusSubject.onNext(MyoControlStatus.NOT_STREAMING)
+                }
+                gatt?.writeCharacteristic(this)
+                return true
+            }
+        }
+        return false
+    }
+
+
+    override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+        super.onConnectionStateChange(gatt, status, newState)
+        Log.d(TAG, "onConnectionStateChange: $status -> $newState")
+        if (newState == BluetoothProfile.STATE_CONNECTED) {
+            Log.d(TAG, "Bluetooth Connected")
+            connectionStatusSubject.onNext(MyoStatus.CONNECTED)
+            gatt.discoverServices()
+        } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+            // Calling disconnect() here will cause to release the GATT resources.
+            disconnect()
+            Log.d(TAG, "Bluetooth Disconnected")
+        }
+    }
+
+
 }

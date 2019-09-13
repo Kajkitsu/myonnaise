@@ -91,11 +91,11 @@ class ControlDevicePresenter(
     override fun onStreamingToggleClicked() {
         deviceManager.myo?.apply {
             if (!this.isStreaming()) {
-                this.sendCommand(CommandList.setStreaming(emgMode = COMAND_EMG_RAW, imuMode = COMAND_IMU_DATA)
+                this.sendCommand(CommandList.setStreaming(emgMode = EmgModeType.RAW, imuMode = ImuModeType.DATA)
                         //CommandList.emgFilteredOnly()
                          )
             } else {
-                this.sendCommand(CommandList.stopStreaming())
+                this.sendCommand(CommandList.setStreaming(emgMode = EmgModeType.NONE,imuMode = ImuModeType.NONE,classMode = ClassifierMode.DISABLE))
             }
         }
     }
@@ -104,9 +104,9 @@ class ControlDevicePresenter(
         deviceManager.myo?.apply {
             this.sendCommand(
                 when (duration) {
-                    1 -> CommandList.vibrationShort()
-                    2 -> CommandList.vibrationMedium()
-                    else -> CommandList.vibrationLong()
+                    1 -> CommandList.vibration(VibrationType.SHORT)
+                    2 -> CommandList.vibration(VibrationType.MEDIUM)
+                    else -> CommandList.vibration(VibrationType.LONG)
                 }
             )
         }
