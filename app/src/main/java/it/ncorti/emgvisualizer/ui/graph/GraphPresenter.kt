@@ -24,7 +24,7 @@ class GraphPresenter(
                 dataSubscriptionEmg?.apply {
                     if (!this.isDisposed) this.dispose()
                 }
-                dataSubscriptionEmg = this.dataFlowableEmg()
+                dataSubscriptionEmg = this.emg.dataFlowableEmg()
                     .subscribeOn(Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())
                     .doOnSubscribe {

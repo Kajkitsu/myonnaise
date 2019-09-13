@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import androidx.core.content.ContextCompat
 
@@ -15,8 +16,8 @@ private const val CIRCLE_SIZE_ACTUAL = 20
 /** Graph size  */
 private const val MAX_DATA_SIZE = 150
 
-private const val INITIAL_MAX_VALUE = 10.0f
-private const val INITIAL_MIN_VALUE = -10.0f
+private const val INITIAL_MAX_VALUE = 1.0f
+private const val INITIAL_MIN_VALUE = -1.0f
 
 class SensorGraphView(context: Context, attrs: AttributeSet) : View(context, attrs) {
 
@@ -106,6 +107,7 @@ class SensorGraphView(context: Context, attrs: AttributeSet) : View(context, att
     fun addPointImu(points: FloatArray) {
         for (i in 0..9) {
             this.normalizedPoints[i+8][currentIndexIMU] = (points[i] - minValue) / spread
+            Log.d("Graphh", "floatArrayData["+i+"] "+points[i].toString())
         }
         currentIndexIMU = (currentIndexIMU + 1) % MAX_DATA_SIZE
         invalidate()

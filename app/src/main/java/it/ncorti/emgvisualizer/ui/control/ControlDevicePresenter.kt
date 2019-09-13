@@ -3,6 +3,7 @@
 package it.ncorti.emgvisualizer.ui.control
 
 import com.ncorti.myonnaise.*
+import com.ncorti.myonnaise.MyoCompoments.*
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
@@ -91,7 +92,7 @@ class ControlDevicePresenter(
     override fun onStreamingToggleClicked() {
         deviceManager.myo?.apply {
             if (!this.isStreaming()) {
-                this.sendCommand(CommandList.setStreaming(emgMode = EmgModeType.FILTERED, imuMode = ImuModeType.ALL)
+                this.sendCommand(CommandList.setStreaming(emgMode = EmgModeType.FILTERED, imuMode = ImuModeType.DATA)
                         //CommandList.emgFilteredOnly()
                          )
             } else {

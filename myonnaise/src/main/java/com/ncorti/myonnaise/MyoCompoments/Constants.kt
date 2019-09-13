@@ -1,4 +1,4 @@
-package com.ncorti.myonnaise
+package com.ncorti.myonnaise.MyoCompoments
 
 import java.util.UUID
 
@@ -63,10 +63,10 @@ const val MYO_MAX_FREQUENCY = 200
 const val MYO_CHANNELS = 18
 
 /** Max Myo Value. This is used mostly for graphical purposes */
-const val MYO_MAX_VALUE = 150.0f
+const val MYO_MAX_VALUE = 15000.0f
 
 /** Min Myo Value. This is used mostly for graphical purposes */
-const val MYO_MIN_VALUE = -150.0f
+const val MYO_MIN_VALUE = -15000.0f
 
 /** Keep Alive in MS. We will send an [CommandList.unSleep] command every [KEEP_ALIVE_INTERVAL_MS] */
 const val KEEP_ALIVE_INTERVAL_MS = 10000

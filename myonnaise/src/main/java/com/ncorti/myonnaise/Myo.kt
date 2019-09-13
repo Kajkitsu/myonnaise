@@ -2,22 +2,20 @@
 
 package com.ncorti.myonnaise
 
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothGatt
-import android.bluetooth.BluetoothGattCallback
-import android.bluetooth.BluetoothGattCharacteristic
-import android.bluetooth.BluetoothGattDescriptor
-import android.bluetooth.BluetoothGattService
-import android.bluetooth.BluetoothProfile
+import android.bluetooth.*
 import android.content.Context
+import android.service.autofill.Validators.or
 import android.util.Log
+import com.ncorti.myonnaise.MyoCompoments.*
+import com.ncorti.myonnaise.MyoCompoments.TAG
 import io.reactivex.Flowable
 import io.reactivex.Observable
 import io.reactivex.processors.PublishProcessor
 import io.reactivex.subjects.BehaviorSubject
-import java.nio.ByteBuffer
 import java.util.LinkedList
 import java.util.concurrent.TimeUnit
+
+
 
 enum class MyoStatus {
     CONNECTED, CONNECTING, READY, DISCONNECTED
@@ -33,18 +31,20 @@ enum class MyoControlStatus {
  *
  * @param device The [BluetoothDevice] that is backing this Myo.
  */
-class Myo(private val device: BluetoothDevice) : MyoEmg() {
+class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
 
     /** The Device Name of this Myo */
     val name: String
         get() = device.name
+
+    var emg = Emg(this)
 
     /** The Device Address of this Myo */
     val address: String
         get() = device.address
 
     /** The EMG Streaming frequency. 0 to reset to the [MYO_MAX_FREQUENCY]. Allowed values [0, MYO_MAX_FREQUENCY] */
-    override var frequency: Int = 0
+    var frequency: Int = 0
         set(value) {
             field = if (value >= MYO_MAX_FREQUENCY) 0 else value
         }
@@ -128,16 +128,6 @@ class Myo(private val device: BluetoothDevice) : MyoEmg() {
     fun controlObservable(): Observable<MyoControlStatus> = controlStatusSubject
 
 
-
-
-
-
-
-
-
-
-
-
     fun dataFlowableImuGyro(): Flowable<FloatArray> {
         return if (frequency == 0) {
             dataImuProcessor
@@ -164,7 +154,7 @@ class Myo(private val device: BluetoothDevice) : MyoEmg() {
             return
         }
         // Find GATT Service EMG
-        FindGattServiceEmg(gatt)
+        emg.FindGattServiceEmg(gatt)
 
 
         // Find GATT Service IMU
@@ -259,7 +249,7 @@ class Myo(private val device: BluetoothDevice) : MyoEmg() {
         super.onCharacteristicChanged(gatt, characteristic)
 
         if (characteristic.uuid.toString().endsWith(CHAR_EMG_POSTFIX)) {
-            putEmgDataToDataProcessor(characteristic)
+            emg.putEmgDataToDataProcessor(characteristic)
         }
 
 
@@ -275,7 +265,36 @@ class Myo(private val device: BluetoothDevice) : MyoEmg() {
         }
     }
 
-    private fun putImuDataToDataProcessor(characteristic: BluetoothGattCharacteristic) {
+
+
+
+     fun twoBytestoFloat(hbits:Int):Float {
+         var mant = hbits and 0x03ff
+         var exp = hbits and 0x7c00
+         if (exp == 0x7c00)
+             exp = 0x3fc00
+         else if (exp != 0)
+         {
+             exp += 0x1c000
+             if (mant == 0 && exp > 0x1c400)
+                 return java.lang.Float.intBitsToFloat(hbits and 0x8000 shl 16 or (exp shl 13) or 0x3ff)
+         }
+         else if (mant != 0)
+         {
+             exp = 0x1c400
+             do
+             {
+                 mant = mant shl 1
+                 exp -= 0x400
+             }
+             while (mant and 0x400 == 0)
+             mant = mant and 0x3ff
+         }
+         return java.lang.Float.intBitsToFloat(hbits and 0x8000 shl 16 or (exp or mant shl 13))
+     }
+
+
+    fun putImuDataToDataProcessor(characteristic: BluetoothGattCharacteristic) {
         val imuData = characteristic.value
         byteReaderImu.byteData = imuData
         Log.d(TAG, "imuData.size) "+imuData.size)
@@ -293,20 +312,45 @@ class Myo(private val device: BluetoothDevice) : MyoEmg() {
 //        }
 //        Log.d(TAG, "imuData. size/2<->size) "+list)
 
-        dataImuProcessor.onNext(byteReaderImu.getBytes(10))
-        dataImuProcessor.onNext(byteReaderImu.getBytes(10))
-        //   dataImuProcessor.onNext(byteReaderImu.getBytes(10))
+        /*
 
-        //            for (x in 0..2){
-        //                dataImuAccelerometerProcessor.onNext(byteReaderEmg.getBytes(1))
-        //            }
-        //            for (x in 0..2){
-        //                dataImuProcessor.onNext(byteReaderEmg.getBytes(1))
-        //            }
-        //  Log.d(TAG, "byteReaderImu = imuData "+imuData.size)
+        var floatArrayData : FloatArray = FloatArray(10)
+
+        var MYOHW_ORIENTATION_SCALE = 16384.0f ///< See myohw_imu_data_t::orientation
+        var MYOHW_ACCELEROMETER_SCALE = 2048.0f  ///< See myohw_imu_data_t::accelerometer
+        var MYOHW_GYROSCOPE_SCALE = 16.0f    ///< See myohw_imu_data_t::gyroscope
+
+        for(i in 0 until 10){
+            val asInt = ((imuData.get(i*2+1).toInt() and 0xFF shl 16)
+                    or (imuData.get(i*2).toInt() and 0xFF shl 24))
+
+            floatArrayData[i] = java.lang.Float.intBitsToFloat(asInt)
+            if(i < 4)  floatArrayData[i]*=MYOHW_ORIENTATION_SCALE
+            else if(i < 7) floatArrayData[i]*=MYOHW_ACCELEROMETER_SCALE
+            else floatArrayData[i]*=MYOHW_GYROSCOPE_SCALE
+        }
+        dataImuProcessor.onNext(floatArrayData)
+         */
+
+        // ignores the higher 16 bits
+
+
+        var floatArrayData : FloatArray = FloatArray(10)
+
+        for(i in 0 until 10){
+            floatArrayData[i] = twoBytestoFloat (
+                    (imuData.get(i*2).toInt() and 0xFF shl 0)
+                            or (imuData.get(i*2+1).toInt() and 0xFF shl 8)
+            )
+        }
+        dataImuProcessor.onNext(floatArrayData)
+
+      //dataImuProcessor.onNext(byteReaderImu.getBytes(10))
+
+
     }
 
-    override fun writeDescriptor(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor) {
+    fun writeDescriptor(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor) {
         writeQueue.add(descriptor)
         // When writing, if the queue is empty, write immediately.
         if (writeQueue.size == 1) {
