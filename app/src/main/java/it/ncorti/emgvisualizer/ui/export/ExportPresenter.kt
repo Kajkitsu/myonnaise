@@ -45,7 +45,7 @@ class ExportPresenter(
         deviceManager.myo?.apply {
             if (this.isStreaming()) {
                 if (dataSubscription == null || dataSubscription?.isDisposed == true) {
-                    dataSubscription = this.dataFlowableEmg()
+                    dataSubscription = this.myoEmg.dataFlowableEmg(frequency)
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .doOnSubscribe {
