@@ -33,7 +33,7 @@ enum class MyoControlStatus {
  *
  * @param device The [BluetoothDevice] that is backing this Myo.
  */
-class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
+class Myo(private val device: BluetoothDevice) : MyoEmg() {
 
     /** The Device Name of this Myo */
     val name: String
@@ -44,7 +44,7 @@ class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
         get() = device.address
 
     /** The EMG Streaming frequency. 0 to reset to the [MYO_MAX_FREQUENCY]. Allowed values [0, MYO_MAX_FREQUENCY] */
-    var frequency: Int = 0
+    override var frequency: Int = 0
         set(value) {
             field = if (value >= MYO_MAX_FREQUENCY) 0 else value
         }
@@ -61,25 +61,23 @@ class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
             BehaviorSubject.createDefault(MyoStatus.DISCONNECTED)
     internal val controlStatusSubject: BehaviorSubject<MyoControlStatus> =
             BehaviorSubject.createDefault(MyoControlStatus.NOT_STREAMING)
-    internal val dataEmgProcessor: PublishProcessor<FloatArray> = PublishProcessor.create()
+
 //    internal val dataImuOrientationProcessor: PublishProcessor<FloatArray> = PublishProcessor.create()
 //    internal val dataImuAccelerometerProcessor: PublishProcessor<FloatArray> = PublishProcessor.create()
     internal val dataImuProcessor: PublishProcessor<FloatArray> = PublishProcessor.create()
 
     internal var gatt: BluetoothGatt? = null
-    private var byteReaderEmg = ByteReader()
+
     private var byteReaderImu = ByteReader()
 
     private var serviceControl: BluetoothGattService? = null
     internal var characteristicCommand: BluetoothGattCharacteristic? = null
     private var characteristicInfo: BluetoothGattCharacteristic? = null
-    private var serviceEmg: BluetoothGattService? = null
+
     private var serviceImu: BluetoothGattService? = null
     private var characteristicImu0: BluetoothGattCharacteristic? = null
-    private var characteristicEmg0: BluetoothGattCharacteristic? = null
-    private var characteristicEmg1: BluetoothGattCharacteristic? = null
-    private var characteristicEmg2: BluetoothGattCharacteristic? = null
-    private var characteristicEmg3: BluetoothGattCharacteristic? = null
+
+
 
     // We are using two queues for writing and reading characteristics/descriptors.
     // Please note that we must always give precedence to the write.
@@ -128,18 +126,17 @@ class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
      * Register to this Observable to be notified when the device is Streaming/Not Streaming.
      */
     fun controlObservable(): Observable<MyoControlStatus> = controlStatusSubject
-    /**
-     * Get a [Flowable] where you can receive data from the device.
-     * Data is delivered as a FloatArray of size [MYO_CHANNELS].
-     * If frequency is set (!= 0) then sub-sampling is performed to achieve the desired frequency.
-     */
-    fun dataFlowableEmg(): Flowable<FloatArray> {
-        return if (frequency == 0) {
-            dataEmgProcessor
-        } else {
-            dataEmgProcessor.sample((1000 / frequency).toLong(), TimeUnit.MILLISECONDS)
-        }
-    }
+
+
+
+
+
+
+
+
+
+
+
 
     fun dataFlowableImuGyro(): Flowable<FloatArray> {
         return if (frequency == 0) {
@@ -226,35 +223,6 @@ class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
         }
     }
 
-    private fun FindGattServiceEmg(gatt: BluetoothGatt) {
-        serviceEmg = gatt.getService(SERVICE_EMG_DATA_ID)
-        serviceEmg?.apply {
-            characteristicEmg0 = serviceEmg?.getCharacteristic(CHAR_EMG_0_ID)
-            characteristicEmg1 = serviceEmg?.getCharacteristic(CHAR_EMG_1_ID)
-            characteristicEmg2 = serviceEmg?.getCharacteristic(CHAR_EMG_2_ID)
-            characteristicEmg3 = serviceEmg?.getCharacteristic(CHAR_EMG_3_ID)
-
-            val emgCharacteristics = listOf(
-                    characteristicEmg0,
-                    characteristicEmg1,
-                    characteristicEmg2,
-                    characteristicEmg3
-            )
-
-            emgCharacteristics.forEach { emgCharacteristic ->
-                emgCharacteristic?.apply {
-                    if (gatt.setCharacteristicNotification(emgCharacteristic, true)) {
-                        val descriptor = emgCharacteristic.getDescriptor(CHAR_CLIENT_CONFIG)
-                        descriptor?.apply {
-                            descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                            writeDescriptor(gatt, descriptor)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     override fun onCharacteristicRead(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
         super.onCharacteristicRead(gatt, characteristic, status)
         readQueue.remove()
@@ -310,7 +278,22 @@ class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
     private fun putImuDataToDataProcessor(characteristic: BluetoothGattCharacteristic) {
         val imuData = characteristic.value
         byteReaderImu.byteData = imuData
+        Log.d(TAG, "imuData.size) "+imuData.size)
 
+//        var list = ""
+//        for(i in 0 until imuData.size/2){
+//            list= (+(imuData[i])).toString()
+//            if(i%4==0) list+=" "
+//        }
+//        Log.d(TAG, "imuData. 0<->size/2) "+list)
+//        list = ""
+//        for(i in imuData.size/2 until imuData.size){
+//            list= (+(imuData[i])).toString()
+//            if(i%4==0) list+=" "
+//        }
+//        Log.d(TAG, "imuData. size/2<->size) "+list)
+
+        dataImuProcessor.onNext(byteReaderImu.getBytes(10))
         dataImuProcessor.onNext(byteReaderImu.getBytes(10))
         //   dataImuProcessor.onNext(byteReaderImu.getBytes(10))
 
@@ -323,17 +306,7 @@ class Myo(private val device: BluetoothDevice) : BluetoothGattCallback() {
         //  Log.d(TAG, "byteReaderImu = imuData "+imuData.size)
     }
 
-    private fun putEmgDataToDataProcessor(characteristic: BluetoothGattCharacteristic) {
-        val emgData = characteristic.value
-        byteReaderEmg.byteData = emgData
-
-        // We receive 16 bytes of data. Let's cut them in 2 and deliver both of them.
-        dataEmgProcessor.onNext(byteReaderEmg.getBytes(EMG_ARRAY_SIZE / 2))
-        dataEmgProcessor.onNext(byteReaderEmg.getBytes(EMG_ARRAY_SIZE / 2))
-        // Log.d(TAG, "dataEmgProcessor. emgData "+emgData.size)
-    }
-
-    internal fun writeDescriptor(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor) {
+    override fun writeDescriptor(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor) {
         writeQueue.add(descriptor)
         // When writing, if the queue is empty, write immediately.
         if (writeQueue.size == 1) {

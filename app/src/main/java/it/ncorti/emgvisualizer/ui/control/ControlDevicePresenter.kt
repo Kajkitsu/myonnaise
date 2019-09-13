@@ -91,7 +91,7 @@ class ControlDevicePresenter(
     override fun onStreamingToggleClicked() {
         deviceManager.myo?.apply {
             if (!this.isStreaming()) {
-                this.sendCommand(CommandList.setStreaming(emgMode = EmgModeType.RAW, imuMode = ImuModeType.DATA)
+                this.sendCommand(CommandList.setStreaming(emgMode = EmgModeType.FILTERED, imuMode = ImuModeType.ALL)
                         //CommandList.emgFilteredOnly()
                          )
             } else {
